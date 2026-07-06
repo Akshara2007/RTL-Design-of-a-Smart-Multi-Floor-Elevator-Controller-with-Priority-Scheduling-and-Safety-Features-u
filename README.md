@@ -48,5 +48,3 @@ The system operates in multiple modes:
 A control FSM selects the active module based on user input.
 
 ---
-
-## 📁 File Structure
