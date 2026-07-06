@@ -1,53 +1,132 @@
-module digital_clock(
-    input clk,
-    input reset,
-    output reg [5:0] seconds,
-    output reg [5:0] minutes,
-    output reg [4:0] hours
+module digital_clock_stopwatch_timer(
+    input clk,          // system clock
+    input reset,        // async reset
+    input mode,         // 0 = clock, 1 = stopwatch/timer toggle
+    input start_stop,   // control stopwatch/timer
+    input set_timer,    // load timer preset
+    output reg [4:0] hour,
+    output reg [5:0] minute,
+    output reg [5:0] second
 );
 
-reg [25:0] count;
+reg running;
+reg timer_mode;   // 0 = stopwatch, 1 = countdown timer
+reg [5:0] t_sec, t_min;
+reg [4:0] t_hour;
 
-always @(posedge clk)
+// -------------------------
+// MAIN SEQUENTIAL LOGIC
+// -------------------------
+always @(posedge clk or posedge reset)
 begin
     if(reset)
     begin
-        count <= 0;
-        seconds <= 0;
-        minutes <= 0;
-        hours <= 0;
+        hour <= 0;
+        minute <= 0;
+        second <= 0;
+
+        t_sec <= 0;
+        t_min <= 0;
+        t_hour <= 0;
+
+        running <= 0;
+        timer_mode <= 0;
     end
-
-    else if(count == 50000000-1)
+    else
     begin
-        count <= 0;
 
-        if(seconds == 59)
+        // -------------------------
+        // MODE SELECT
+        // -------------------------
+        if(mode == 0)
         begin
-            seconds <= 0;
-
-            if(minutes == 59)
+            // CLOCK MODE
+            if(second == 59)
             begin
-                minutes <= 0;
+                second <= 0;
 
-                if(hours == 23)
-                    hours <= 0;
+                if(minute == 59)
+                begin
+                    minute <= 0;
+
+                    if(hour == 23)
+                        hour <= 0;
+                    else
+                        hour <= hour + 1;
+                end
                 else
-                    hours <= hours + 1;
+                    minute <= minute + 1;
             end
-
             else
-                minutes <= minutes + 1;
+                second <= second + 1;
         end
 
         else
-            seconds <= seconds + 1;
-    end
+        begin
+            // STOPWATCH / TIMER MODE
 
-    else
-    begin
-        count <= count + 1;
+            if(start_stop)
+                running <= ~running;
+
+            // -------------------------
+            // STOPWATCH MODE
+            // -------------------------
+            if(timer_mode == 0)
+            begin
+                if(running)
+                begin
+                    if(second == 59)
+                    begin
+                        second <= 0;
+
+                        if(minute == 59)
+                        begin
+                            minute <= 0;
+                            hour <= hour + 1;
+                        end
+                        else
+                            minute <= minute + 1;
+                    end
+                    else
+                        second <= second + 1;
+                end
+            end
+
+            // -------------------------
+            // TIMER MODE (COUNTDOWN)
+            // -------------------------
+            else
+            begin
+                if(set_timer)
+                begin
+                    // preset example: 1 minute
+                    second <= 0;
+                    minute <= 1;
+                    hour <= 0;
+                end
+
+                if(running)
+                begin
+                    if(second == 0)
+                    begin
+                        if(minute == 0)
+                        begin
+                            running <= 0; // stop at zero
+                        end
+                        else
+                        begin
+                            second <= 59;
+                            minute <= minute - 1;
+                        end
+                    end
+                    else
+                        second <= second - 1;
+                end
+            end
+
+        end
     end
 end
 
+endmodule
 endmodule
