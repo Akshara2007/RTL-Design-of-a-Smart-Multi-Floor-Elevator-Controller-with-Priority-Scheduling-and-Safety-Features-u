@@ -152,7 +152,6 @@ Door closes after the waiting period.
 
 ---
 
-
 # 📊 Simulation Result
 
 The elevator controller was verified using a Verilog testbench.
