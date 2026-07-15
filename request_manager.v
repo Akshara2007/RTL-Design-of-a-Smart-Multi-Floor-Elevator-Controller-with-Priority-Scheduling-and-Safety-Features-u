@@ -19,18 +19,14 @@ always @(posedge clk or posedge reset)
 begin
 
     if(reset)
-    begin
         requests <= 4'b0000;
-    end
 
     else
     begin
 
-        // Store new request
         if(request_valid)
             requests[requested_floor] <= 1'b1;
 
-        // Clear completed request
         if(clear_request)
             requests[served_floor] <= 1'b0;
 
