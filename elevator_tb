@@ -1,50 +1,19 @@
 `timescale 1ns/1ps
 
-module elevator_top(
+module elevator_tb;
 
-    input clk,
-    input reset,
+reg clk;
+reg reset;
 
-    // Floor request input
-    input request_valid,
-    input [1:0] requested_floor,
+reg request_valid;
+reg [1:0] requested_floor;
 
-    // Safety inputs
-    input emergency,
-    input overload,
-    input obstruction,
-
-    // Outputs
-    output [1:0] current_floor,
-    output door_open,
-    output emergency_led
-
-);
+wire [1:0] current_floor;
+wire door_open;
 
 
-wire [3:0] requests;
-
-wire [1:0] next_floor;
-wire request_found;
-
-wire direction;
-wire next_direction;
-
-wire move;
-
-wire arrived;
-
-wire allow_move;
-
-wire door_busy;
-
-
-
-//----------------------------------
-// Request Manager
-//----------------------------------
-
-request_manager RM(
+// Instantiate Top Module
+elevator_top DUT(
 
     .clk(clk),
     .reset(reset),
@@ -52,141 +21,73 @@ request_manager RM(
     .request_valid(request_valid),
     .requested_floor(requested_floor),
 
-    .clear_request(arrived),
-    .served_floor(current_floor),
-
-    .requests(requests)
-
-);
-
-
-
-//----------------------------------
-// Scheduler
-//----------------------------------
-
-scheduler SCH(
-
     .current_floor(current_floor),
-
-    .direction(next_direction),
-
-    .requests(requests),
-
-    .next_floor(next_floor),
-
-    .request_found(request_found),
-
-    .next_direction(direction)
+    .door_open(door_open)
 
 );
 
 
-
-//----------------------------------
-// Elevator Controller FSM
-//----------------------------------
-
-elevator_controller FSM(
-
-    .clk(clk),
-    .reset(reset),
-
-    .request_valid(request_found),
-    .requested_floor(next_floor),
-
-    .emergency(emergency),
-
-    .overload(overload),
-
-    .obstruction(obstruction),
-
-    .current_floor(current_floor),
-
-    .direction(direction),
-
-    .moving(move),
-
-    .door_open(door_open),
-
-    .busy(),
-
-    .emergency_led(emergency_led)
-
-);
+// Clock Generation
+always #5 clk = ~clk;
 
 
+// Test Sequence
+initial
+begin
 
-//----------------------------------
-// Floor Counter
-//----------------------------------
+    clk = 0;
+    reset = 1;
 
-floor_counter FC(
+    request_valid = 0;
+    requested_floor = 2'b00;
 
-    .clk(clk),
-    .reset(reset),
+    // Reset
+    #20;
+    reset = 0;
 
-    .move(move & allow_move),
+    // Request Floor 3
+    #10;
+    request_valid = 1;
+    requested_floor = 2'b11;
 
-    .direction(direction),
+    #10;
+    request_valid = 0;
 
-    .target_floor(next_floor),
+    // Wait
+    #100;
 
-    .current_floor(current_floor),
+    // Request Floor 1
+    #10;
+    request_valid = 1;
+    requested_floor = 2'b01;
 
-    .arrived(arrived)
+    #10;
+    request_valid = 0;
 
-);
+    // Wait
+    #100;
 
+    // Request Floor 2
+    #10;
+    request_valid = 1;
+    requested_floor = 2'b10;
 
+    #10;
+    request_valid = 0;
 
-//----------------------------------
-// Door Controller
-//----------------------------------
+    // Wait
+    #100;
 
-door_controller DC(
+    $finish;
 
-    .clk(clk),
-    .reset(reset),
-
-    .open_request(arrived),
-
-    .obstruction(obstruction),
-
-    .door_open(door_open),
-
-    .door_close(),
-
-    .door_busy(door_busy)
-
-);
-
+end
 
 
-//----------------------------------
-// Safety Controller
-//----------------------------------
-
-safety_controller SAFE(
-
-    .clk(clk),
-    .reset(reset),
-
-    .emergency(emergency),
-
-    .overload_sensor(overload),
-
-    .door_open(door_open),
-
-    .move_request(move),
-
-    .emergency_stop(),
-
-    .overload_alarm(),
-
-    .allow_move(allow_move)
-
-);
-
+// Waveform Generation
+initial
+begin
+    $dumpfile("elevator.vcd");
+    $dumpvars(0, elevator_tb);
+end
 
 endmodule
